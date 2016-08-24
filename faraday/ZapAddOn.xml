@@ -1,0 +1,18 @@
+<zapaddon>
+	<name>Faraday XmlExport</name>
+	<version>4</version>
+	<status>alpha</status>
+	<description>Faraday xml exporter. V4</description>
+	<author>ZAP Dev Team</author>
+	<url></url>
+	<changes>Second version</changes>
+	<extensions>
+		<extension>org.zaproxy.zap.extension.faraday.XmlExport</extension>
+	</extensions>
+	<ascanrules/>
+	<pscanrules/>
+	<filters/>
+	<files/>
+	<not-before-version>2.4.0</not-before-version>
+	<not-from-version></not-from-version>
+</zapaddon>
