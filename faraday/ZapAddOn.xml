@@ -1,11 +1,11 @@
 <zapaddon>
 	<name>Faraday XmlExport</name>
-	<version>5</version>
+	<version>1</version>
 	<status>alpha</status>
-	<description>Faraday xml exporter. V4</description>
-	<author>ZAP Dev Team</author>
+	<description>Faraday xml exporter.</description>
+	<author>Jorge Gómez - Julieta Sal-lari. Instituto Tecnológico de Buenos Aires</author>
 	<url></url>
-	<changes>Second version</changes>
+	<changes>First version faraday xml exporter.</changes>
 	<extensions>
 		<extension>org.zaproxy.zap.extension.faraday.XmlExport</extension>
 	</extensions>

@@ -21,7 +21,7 @@ import java.net.URL;
 public class XmlExport extends ExtensionAdaptor {
     //Use this variable for run main without building extension and running zap
     //TODO Delete this variable on production environment
-    private static final boolean TESTING = true;
+    private static final boolean TESTING = false;
 
     public static String EXTENSION_NAME = "Faraday Xml Exporter";
 	public static String PREFIX = "faraday.xmlExport.";
@@ -41,12 +41,11 @@ public class XmlExport extends ExtensionAdaptor {
     private JComboBox<String> jComboBox;
     private JCheckBox jCheckBox;
     private JFileChooser folderChooser;
+    private JPanel jPanel;
     final JFileChooser fc = new JFileChooser();
 
     //TODO Delete main on production environment
     public static void main(String[] args) throws Exception {
-        System.out.println(DEFAULT_FARADAY_REPORT_PATH);
-
         new XmlExport().showExportForm();
     }
 
@@ -94,8 +93,9 @@ public class XmlExport extends ExtensionAdaptor {
     }
 
     private void showExportForm() {
-        JPanel jPanel = new JPanel(new GridLayout(0,1));
-
+        if (jPanel == null) {
+            jPanel = new JPanel(new GridLayout(0, 1));
+        }
         //JText field initialization
         JPanel folderPanel = new JPanel(new GridLayout(0,2));
         if (jTextField == null) {
@@ -143,8 +143,7 @@ public class XmlExport extends ExtensionAdaptor {
         }
         jPanel.add(jCheckBox);
 
-        //View.getSingleton().getOutputPanel()
-        //View.getSingleton().showMessageDialog(jPanel, getStringLoc("sendReport"));
+        //TODO Check if there is another way to show confirm dialog using next line
         //View.getSingleton().showConfirmDialog(jPanel, getStringLoc("sendReport"));
         int result = JOptionPane.showConfirmDialog(null, jPanel, getStringLoc("sendReport"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.YES_OPTION) {
@@ -158,7 +157,6 @@ public class XmlExport extends ExtensionAdaptor {
             }
             saveReport(faradayReportPath + "/" + currentWorkspace);
         }
-        //jPanel.setVisible(true);
     }
 
     private void saveReport(String folderPath) {
@@ -176,28 +174,20 @@ public class XmlExport extends ExtensionAdaptor {
 
     @Override
     public String getAuthor() {
-        return Constant.ZAP_TEAM;
+        return getStringLoc("author");
     }
 
     @Override
     public String getDescription() {
-        return getStringLoc("desc");
+        return getStringLoc("description");
     }
 
     @Override
     public URL getURL() {
         try {
-            return new URL(Constant.ZAP_EXTENSIONS_PAGE);
+            return new URL(getStringLoc("url"));
         } catch (MalformedURLException e) {
             return null;
         }
-    }
-
-    public void setCurrentWorkspace(String currentWorkspace) {
-        this.currentWorkspace = currentWorkspace;
-    }
-
-    public void setFaradayReportPath(String faradayReportPath) {
-        this.faradayReportPath = faradayReportPath;
     }
 }
