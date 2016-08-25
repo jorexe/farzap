@@ -3,6 +3,7 @@ package org.zaproxy.zap.extension.faraday;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
+import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.view.ZapMenuItem;
 
 import javax.swing.*;
@@ -29,6 +30,8 @@ public class XmlExport extends ExtensionAdaptor {
     //State variables
     private String currentWorkspace;
     private String faradayReportPath;
+    //TODO Check if there is a way to restore variable to false (zap settings maybe?)
+    private boolean usingDefaultParameters;
 
     //Menu variable
     private ZapMenuItem zapMenuItem;
@@ -50,6 +53,8 @@ public class XmlExport extends ExtensionAdaptor {
     public XmlExport() {
         super(EXTENSION_NAME);
         this.faradayReportPath = DEFAULT_FARADAY_REPORT_PATH;
+        currentWorkspace = "";
+        usingDefaultParameters = false;
     }
 
     @Override
@@ -67,15 +72,19 @@ public class XmlExport extends ExtensionAdaptor {
             this.zapMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    showExportForm();
+                    if (usingDefaultParameters) {
+                        showExportForm();
+                    } else {
+                        saveReport(faradayReportPath + "/" + currentWorkspace);
+                    }
                 }
             });
         }
         return this.zapMenuItem;
     }
 
-    public String[] getDirectories() {
-        File file = new File(faradayReportPath);
+    public String[] getDirectories(String path) {
+        File file = new File(path);
         return file.list(new FilenameFilter() {
             @Override
             public boolean accept(File current, String name) {
@@ -90,22 +99,21 @@ public class XmlExport extends ExtensionAdaptor {
         //JText field initialization
         JPanel folderPanel = new JPanel(new GridLayout(0,2));
         if (jTextField == null) {
-            jTextField = new JTextField(DEFAULT_FARADAY_REPORT_PATH);
+            jTextField = new JTextField(faradayReportPath);
             jTextField.setEditable(false);
         }
-        JButton chooseFolderButton = new JButton(getStringLoc(PREFIX + "selectFaradayOutput"));
+        JButton chooseFolderButton = new JButton(getStringLoc("selectFaradayOutput"));
         if (folderChooser == null) {
             folderChooser = new JFileChooser();
             folderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            folderChooser.setCurrentDirectory(new File(DEFAULT_FARADAY_REPORT_PATH));
+            folderChooser.setCurrentDirectory(new File(faradayReportPath));
             folderChooser.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent actionEvent) {
                     String selectedFolder = folderChooser.getSelectedFile().getAbsolutePath();
                     jTextField.setText(selectedFolder);
-                    setFaradayReportPath(selectedFolder);
                     jComboBox.removeAllItems();
-                    for (String s : getDirectories()) {
+                    for (String s : getDirectories(selectedFolder)) {
                         jComboBox.addItem(s);
                     }
                 }
@@ -117,44 +125,52 @@ public class XmlExport extends ExtensionAdaptor {
                 folderChooser.showSaveDialog(jPanel);
             }
         });
-        jPanel.add(new Label(getStringLoc(PREFIX + "selectFaradayOutput")));
+        jPanel.add(new Label(getStringLoc("selectFaradayOutput")));
         folderPanel.add(jTextField);
         folderPanel.add(chooseFolderButton);
         jPanel.add(folderPanel);
 
         //JComboBox initialization
         if (jComboBox == null) {
-            jComboBox = new JComboBox<String>(getDirectories());
+            jComboBox = new JComboBox<String>(getDirectories(faradayReportPath));
         }
-        jComboBox.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                JComboBox jComboBox = (JComboBox)actionEvent.getSource();
-                setCurrentWorkspace((String) jComboBox.getSelectedItem());
-            }
-        });
-        jPanel.add(new Label(getStringLoc(PREFIX + "selectWorkspace")));
+        jPanel.add(new Label(getStringLoc("selectWorkspace")));
         jPanel.add(jComboBox);
 
         //Default checkbox initialization
         if (jCheckBox == null) {
-            jCheckBox = new JCheckBox(getStringLoc(PREFIX + "useAsDefault"));
+            jCheckBox = new JCheckBox(getStringLoc("useAsDefault"));
         }
         jPanel.add(jCheckBox);
 
         //View.getSingleton().getOutputPanel()
-        //View.getSingleton().showMessageDialog(jPanel, getStringLoc(PREFIX + "sendReport"));
-        //View.getSingleton().showConfirmDialog(jPanel, getStringLoc(PREFIX + "sendReport"));
-        JOptionPane.showConfirmDialog(null, jPanel, getStringLoc(PREFIX + "sendReport"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
+        //View.getSingleton().showMessageDialog(jPanel, getStringLoc("sendReport"));
+        //View.getSingleton().showConfirmDialog(jPanel, getStringLoc("sendReport"));
+        int result = JOptionPane.showConfirmDialog(null, jPanel, getStringLoc("sendReport"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.YES_OPTION) {
+            currentWorkspace = (String) jComboBox.getSelectedItem();
+            if (currentWorkspace == null || currentWorkspace.isEmpty()) {
+                View.getSingleton().showWarningDialog(getStringLoc("invalidWorkspace"));
+            }
+            faradayReportPath = jTextField.getText();
+            if (jCheckBox.isSelected()) {
+                usingDefaultParameters = true;
+            }
+            saveReport(faradayReportPath + "/" + currentWorkspace);
+        }
         //jPanel.setVisible(true);
+    }
+
+    private void saveReport(String folderPath) {
+        //TODO Search on ZAP documentation how to export report
+        //TODO Show success/failure dialog
     }
 
     private String getStringLoc(String str) {
         if (TESTING) {
             return str;
         } else {
-            return Constant.messages.getString(str);
+            return Constant.messages.getString(PREFIX + str);
         }
     }
 
@@ -165,7 +181,7 @@ public class XmlExport extends ExtensionAdaptor {
 
     @Override
     public String getDescription() {
-        return getStringLoc(PREFIX + "desc");
+        return getStringLoc("desc");
     }
 
     @Override
