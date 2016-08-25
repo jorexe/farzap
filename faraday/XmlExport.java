@@ -29,6 +29,7 @@ public class XmlExport extends ExtensionAdaptor {
 
     private String currentWorkspace;
 
+    //TODO Delete main on production environment
     public static void main(String[] args) throws Exception {
         System.out.println(DEFAULT_FARADAY_REPORT_PATH);
 
