@@ -13,7 +13,6 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
 
 /**
  * Created by Jorge Gómez on 19/08/16.
@@ -25,42 +24,32 @@ public class XmlExport extends ExtensionAdaptor {
 
     public static String EXTENSION_NAME = "Faraday Xml Exporter";
 	public static String PREFIX = "faraday.xmlExport.";
-	public static String DEFAULT_FARADAY_REPORT_PATH = System.getProperty("user.home") + "/.faraday/report/";
+	public static String DEFAULT_FARADAY_REPORT_PATH = System.getProperty("user.home") + "/.faraday/report";
 
+    //State variables
     private String currentWorkspace;
+    private String faradayReportPath;
+
+    //Menu variable
+    private ZapMenuItem zapMenuItem;
+
+    //Panel variables
+    private JTextField jTextField;
+    private JComboBox<String> jComboBox;
+    private JCheckBox jCheckBox;
+    private JFileChooser folderChooser;
+    final JFileChooser fc = new JFileChooser();
 
     //TODO Delete main on production environment
     public static void main(String[] args) throws Exception {
         System.out.println(DEFAULT_FARADAY_REPORT_PATH);
 
-        System.out.println(Arrays.toString(getDirectories()));
         new XmlExport().showExportForm();
     }
-
-    private ZapMenuItem zapMenuItem;
-
-    private JTextField jTextField;
-    private JComboBox<String> jComboBox;
-    private JCheckBox jCheckBox;
-    private JFileChooser folderChooser;
-
-    private String faradayReportPath;
-
-    final JFileChooser fc = new JFileChooser();
 
     public XmlExport() {
         super(EXTENSION_NAME);
         this.faradayReportPath = DEFAULT_FARADAY_REPORT_PATH;
-    }
-
-    public static String[] getDirectories() {
-        File file = new File(DEFAULT_FARADAY_REPORT_PATH);
-        return file.list(new FilenameFilter() {
-            @Override
-            public boolean accept(File current, String name) {
-                return new File(current, name).isDirectory();
-            }
-        });
     }
 
     @Override
@@ -85,6 +74,16 @@ public class XmlExport extends ExtensionAdaptor {
         return this.zapMenuItem;
     }
 
+    public String[] getDirectories() {
+        File file = new File(faradayReportPath);
+        return file.list(new FilenameFilter() {
+            @Override
+            public boolean accept(File current, String name) {
+                return new File(current, name).isDirectory();
+            }
+        });
+    }
+
     private void showExportForm() {
         JPanel jPanel = new JPanel(new GridLayout(0,1));
 
@@ -102,7 +101,13 @@ public class XmlExport extends ExtensionAdaptor {
             folderChooser.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent actionEvent) {
-                    jTextField.setText(folderChooser.getSelectedFile().getAbsolutePath());
+                    String selectedFolder = folderChooser.getSelectedFile().getAbsolutePath();
+                    jTextField.setText(selectedFolder);
+                    setFaradayReportPath(selectedFolder);
+                    jComboBox.removeAllItems();
+                    for (String s : getDirectories()) {
+                        jComboBox.addItem(s);
+                    }
                 }
             });
         }
@@ -176,4 +181,7 @@ public class XmlExport extends ExtensionAdaptor {
         this.currentWorkspace = currentWorkspace;
     }
 
+    public void setFaradayReportPath(String faradayReportPath) {
+        this.faradayReportPath = faradayReportPath;
+    }
 }
