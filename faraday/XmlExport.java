@@ -3,6 +3,7 @@ package org.zaproxy.zap.extension.faraday;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
+import org.parosproxy.paros.extension.report.ReportLastScan;
 import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.view.ZapMenuItem;
 
@@ -14,6 +15,9 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Created by Jorge Gómez on 19/08/16.
@@ -65,7 +69,6 @@ public class XmlExport extends ExtensionAdaptor {
     }
 
     private ZapMenuItem getMenu() {
-        System.out.println("XmlExport.getMenu");
         if (zapMenuItem == null) {
             this.zapMenuItem = new ZapMenuItem(PREFIX + "sendReport");
             this.zapMenuItem.addActionListener(new ActionListener() {
@@ -162,6 +165,14 @@ public class XmlExport extends ExtensionAdaptor {
     private void saveReport(String folderPath) {
         //TODO Search on ZAP documentation how to export report
         //TODO Show success/failure dialog
+        ReportLastScan report = new ReportLastScan();
+        DateFormat df = new SimpleDateFormat("YYYY-MM-DD-hh-mm-ss");
+        String reportFullPath = folderPath + "/" + df.format(new Date()) + ".xml";
+        try {
+            report.generate(reportFullPath, getModel(), null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private String getStringLoc(String str) {
