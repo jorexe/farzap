@@ -30,6 +30,7 @@ public class XmlExport extends ExtensionAdaptor {
     public static String EXTENSION_NAME = "Faraday Xml Exporter";
 	public static String PREFIX = "faraday.xmlExport.";
 	public static String DEFAULT_FARADAY_REPORT_PATH = System.getProperty("user.home") + "/.faraday/report";
+    public static String UNPROCESSED_FARADAY_REPORT_FOLDER = "unprocessed";
 
     //State variables
     private String currentWorkspace;
@@ -75,9 +76,9 @@ public class XmlExport extends ExtensionAdaptor {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     if (usingDefaultParameters) {
-                        showExportForm();
+                        saveReport(faradayReportPath + "/" + currentWorkspace + "/" + UNPROCESSED_FARADAY_REPORT_FOLDER);
                     } else {
-                        saveReport(faradayReportPath + "/" + currentWorkspace);
+                        showExportForm();
                     }
                 }
             });
@@ -158,7 +159,7 @@ public class XmlExport extends ExtensionAdaptor {
             if (jCheckBox.isSelected()) {
                 usingDefaultParameters = true;
             }
-            saveReport(faradayReportPath + "/" + currentWorkspace);
+            saveReport(faradayReportPath + "/" + currentWorkspace + "/" + UNPROCESSED_FARADAY_REPORT_FOLDER);
         }
     }
 
@@ -168,6 +169,7 @@ public class XmlExport extends ExtensionAdaptor {
         ReportLastScan report = new ReportLastScan();
         DateFormat df = new SimpleDateFormat("YYYY-MM-DD-hh-mm-ss");
         String reportFullPath = folderPath + "/" + df.format(new Date()) + ".xml";
+        System.out.println("Saving report to:" + reportFullPath);
         try {
             report.generate(reportFullPath, getModel(), null);
         } catch (Exception e) {
@@ -176,7 +178,7 @@ public class XmlExport extends ExtensionAdaptor {
     }
 
     private String getStringLoc(String str) {
-        if (TESTING) {
+        if (TESTING || Constant.messages == null) {
             return str;
         } else {
             return Constant.messages.getString(PREFIX + str);
