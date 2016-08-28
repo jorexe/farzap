@@ -42,11 +42,12 @@ public class XmlExport extends ExtensionAdaptor {
     private ZapMenuItem zapMenuItem;
 
     //Panel variables
-    private JTextField jTextField;
-    private JComboBox<String> jComboBox;
-    private JCheckBox jCheckBox;
+    private JPanel mainPanel;
+    private JTextField reportFolderTextField;
+    private JComboBox<String> workspaceComboBox;
+    private JCheckBox useDefaultCheckBox;
     private JFileChooser folderChooser;
-    private JPanel jPanel;
+    private JButton chooseFolderButton;
     final JFileChooser fc = new JFileChooser();
 
     //TODO Delete main on production environment
@@ -96,17 +97,15 @@ public class XmlExport extends ExtensionAdaptor {
         });
     }
 
-    private void showExportForm() {
-        if (jPanel == null) {
-            jPanel = new JPanel(new GridLayout(0, 1));
-        }
-        //JText field initialization
+    private JPanel getFolderPanel() {
         JPanel folderPanel = new JPanel(new GridLayout(0,2));
-        if (jTextField == null) {
-            jTextField = new JTextField(faradayReportPath);
-            jTextField.setEditable(false);
+        if (reportFolderTextField == null) {
+            reportFolderTextField = new JTextField(faradayReportPath);
+            reportFolderTextField.setEditable(false);
         }
-        JButton chooseFolderButton = new JButton(getStringLoc("selectFaradayOutput"));
+        if (chooseFolderButton == null) {
+            chooseFolderButton = new JButton(getStringLoc("selectFaradayOutput"));
+        }
         if (folderChooser == null) {
             folderChooser = new JFileChooser();
             folderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -115,10 +114,10 @@ public class XmlExport extends ExtensionAdaptor {
                 @Override
                 public void actionPerformed(ActionEvent actionEvent) {
                     String selectedFolder = folderChooser.getSelectedFile().getAbsolutePath();
-                    jTextField.setText(selectedFolder);
-                    jComboBox.removeAllItems();
+                    reportFolderTextField.setText(selectedFolder);
+                    workspaceComboBox.removeAllItems();
                     for (String s : getDirectories(selectedFolder)) {
-                        jComboBox.addItem(s);
+                        workspaceComboBox.addItem(s);
                     }
                 }
             });
@@ -126,37 +125,52 @@ public class XmlExport extends ExtensionAdaptor {
         chooseFolderButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                folderChooser.showSaveDialog(jPanel);
+                folderChooser.showSaveDialog(mainPanel);
             }
         });
-        jPanel.add(new Label(getStringLoc("selectFaradayOutput")));
-        folderPanel.add(jTextField);
+        folderPanel.add(reportFolderTextField);
         folderPanel.add(chooseFolderButton);
-        jPanel.add(folderPanel);
+        return folderPanel;
+    }
 
-        //JComboBox initialization
-        if (jComboBox == null) {
-            jComboBox = new JComboBox<String>(getDirectories(faradayReportPath));
+    private JComboBox getWorkspaceComboBox() {
+        if (workspaceComboBox == null) {
+            workspaceComboBox = new JComboBox<String>(getDirectories(faradayReportPath));
         }
-        jPanel.add(new Label(getStringLoc("selectWorkspace")));
-        jPanel.add(jComboBox);
+        return workspaceComboBox;
+    }
 
-        //Default checkbox initialization
-        if (jCheckBox == null) {
-            jCheckBox = new JCheckBox(getStringLoc("useAsDefault"));
+    private JCheckBox getUseDefaultCheckBox() {
+        if (useDefaultCheckBox == null) {
+            useDefaultCheckBox = new JCheckBox(getStringLoc("useAsDefault"));
         }
-        jPanel.add(jCheckBox);
+        return useDefaultCheckBox;
+    }
+
+    private void showExportForm() {
+        //Main panel initialization
+        if (mainPanel == null) {
+            mainPanel = new JPanel(new GridLayout(0, 1));
+
+            mainPanel.add(new Label(getStringLoc("selectFaradayOutput")));
+            mainPanel.add(getFolderPanel());
+
+            mainPanel.add(new Label(getStringLoc("selectWorkspace")));
+            mainPanel.add(getWorkspaceComboBox());
+
+            mainPanel.add(getUseDefaultCheckBox());
+        }
 
         //TODO Check if there is another way to show confirm dialog using next line
-        //View.getSingleton().showConfirmDialog(jPanel, getStringLoc("sendReport"));
-        int result = JOptionPane.showConfirmDialog(null, jPanel, getStringLoc("sendReport"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        //View.getSingleton().showConfirmDialog(mainPanel, getStringLoc("sendReport"));
+        int result = JOptionPane.showConfirmDialog(null, mainPanel, getStringLoc("sendReport"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.YES_OPTION) {
-            currentWorkspace = (String) jComboBox.getSelectedItem();
+            currentWorkspace = (String) workspaceComboBox.getSelectedItem();
             if (currentWorkspace == null || currentWorkspace.isEmpty()) {
                 View.getSingleton().showWarningDialog(getStringLoc("invalidWorkspace"));
             }
-            faradayReportPath = jTextField.getText();
-            if (jCheckBox.isSelected()) {
+            faradayReportPath = reportFolderTextField.getText();
+            if (useDefaultCheckBox.isSelected()) {
                 usingDefaultParameters = true;
             }
             saveReport(faradayReportPath + "/" + currentWorkspace + "/" + UNPROCESSED_FARADAY_REPORT_FOLDER);
@@ -164,16 +178,16 @@ public class XmlExport extends ExtensionAdaptor {
     }
 
     private void saveReport(String folderPath) {
-        //TODO Search on ZAP documentation how to export report
-        //TODO Show success/failure dialog
         ReportLastScan report = new ReportLastScan();
         DateFormat df = new SimpleDateFormat("YYYY-MM-DD-hh-mm-ss");
         String reportFullPath = folderPath + "/" + df.format(new Date()) + ".xml";
         System.out.println("Saving report to:" + reportFullPath);
         try {
             report.generate(reportFullPath, getModel(), null);
+            View.getSingleton().showMessageDialog(getStringLoc("exportSucceed"));
         } catch (Exception e) {
             e.printStackTrace();
+            View.getSingleton().showWarningDialog(getStringLoc("error"));
         }
     }
 
