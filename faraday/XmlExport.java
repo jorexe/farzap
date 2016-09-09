@@ -5,6 +5,8 @@ import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
 import org.parosproxy.paros.extension.report.ReportLastScan;
 import org.parosproxy.paros.view.View;
+import org.zaproxy.zap.extension.faraday.RightClickMsgMenu;
+import org.zaproxy.zap.view.PopupMenuHistoryReference.Invoker;
 import org.zaproxy.zap.view.ZapMenuItem;
 
 import javax.swing.*;
@@ -41,7 +43,7 @@ public class XmlExport extends ExtensionAdaptor {
     //Menu variable
     private ZapMenuItem zapMenuItem;
 
-    //Panel variables
+	//Panel variables
     private JPanel mainPanel;
     private JTextField reportFolderTextField;
     private JComboBox<String> workspaceComboBox;
@@ -50,6 +52,9 @@ public class XmlExport extends ExtensionAdaptor {
     private JButton chooseFolderButton;
     final JFileChooser fc = new JFileChooser();
 
+    //shortcut on some components to add to report
+    private RightClickMsgMenu popupMsgMenuExample;
+    
     //TODO Delete main on production environment
     public static void main(String[] args) throws Exception {
         new XmlExport().showExportForm();
@@ -67,6 +72,7 @@ public class XmlExport extends ExtensionAdaptor {
         super.hook(extensionHook);
         if (getView() != null) {
             extensionHook.getHookMenu().addToolsMenuItem(getMenu());
+            extensionHook.getHookMenu().addPopupMenuItem(getPopupMsgMenuExample());
         }
     }
 
@@ -191,6 +197,22 @@ public class XmlExport extends ExtensionAdaptor {
         }
     }
 
+    private RightClickMsgMenu getPopupMsgMenuExample() {
+		if (popupMsgMenuExample  == null) {
+			popupMsgMenuExample = new RightClickMsgMenu(this, 
+					getStringLoc("sendReport"));
+		}
+		return popupMsgMenuExample;
+	}
+    
+    protected void showAndSave() {
+		if (usingDefaultParameters) {
+            saveReport(faradayReportPath + "/" + currentWorkspace + "/" + UNPROCESSED_FARADAY_REPORT_FOLDER);
+        } else {
+            showExportForm();
+        }
+	}
+    
     private String getStringLoc(String str) {
         if (TESTING || Constant.messages == null) {
             return str;
