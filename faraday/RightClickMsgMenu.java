@@ -17,20 +17,26 @@
  */
 package org.zaproxy.zap.extension.faraday;
 
-import org.parosproxy.paros.network.HttpMessage;
-import org.zaproxy.zap.view.messagecontainer.http.HttpMessageContainer;
-import org.zaproxy.zap.view.popup.PopupMenuItemHttpMessageContainer;
+import java.awt.Component;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-/**
- * A pop up menu item shown in components that contain HTTP messages, it shows an internationalised message with the request-uri
- * of the HTTP message.
- * 
- * @see HttpMessageContainer
- */
-public class RightClickMsgMenu extends PopupMenuItemHttpMessageContainer {
+import org.parosproxy.paros.Constant;
+import org.parosproxy.paros.core.scanner.Alert;
+import org.parosproxy.paros.extension.report.ReportGenerator;
+import org.parosproxy.paros.model.Model;
+import org.zaproxy.zap.extension.bugtracker.PopupMenuItemAlert;
+import org.zaproxy.zap.utils.XMLStringUtil;
+
+
+public class RightClickMsgMenu extends PopupMenuItemAlert {
 
 	private static final long serialVersionUID = 1L;
-	@SuppressWarnings("unused")
 	private XmlExport extension;
 
     public RightClickMsgMenu(XmlExport ext, String label) {
@@ -43,18 +49,97 @@ public class RightClickMsgMenu extends PopupMenuItemHttpMessageContainer {
     }
 	
 	@Override
-	public void performAction(HttpMessage msg) {
-		// This is where you do what you want to do.
-		extension.showAndSave();
+	protected void performAction(Alert alert) {
+		// TODO Auto-generated method stub
+		System.out.println("on perform single alert");
+		try {
+			Map<String, List<Alert>> alertMap = new HashMap<String, List<Alert>>();
+			List<Alert> alerts = new ArrayList();
+			alerts.add(alert);
+			//TODO: check
+        	alertMap.put(alert.getUrlParamXML(), alerts);
+			generate(new StringBuilder(500), extension.getModel(), alertMap);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
-
-	//TODO: enable invoker only for the reports components
+	
 	@Override
-	public boolean isEnableForInvoker(Invoker invoker, HttpMessageContainer httpMessageContainer) {
-		// This pop up menu item is enabled for all tabs/components that have just one
-		// message (selected, if it shows more than one and allows to selected them)
-		// You can examine the invoker if you wish to restrict this to specific tabs
+	protected void performActions(Set<Alert> alerts) {
+        System.out.println("perform set");
+        //TODO: fix try-catch
+        try {
+			generate(new StringBuilder(500), extension.getModel(), getAlertsByHost(alerts));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+	
+	private Map<String, List<Alert>> getAlertsByHost(Set<Alert> alerts) {
+	    Map<String, List<Alert>> alertsByHost = new HashMap<String, List<Alert>>();
+	    for (Alert alert : alerts) {
+	        URL url = null;
+	        try {
+	            url = new URL(alert.getUri());
+	            String host = url.getHost();
+	            if (alertsByHost.get(host) == null) {
+	                alertsByHost.put(host, new ArrayList<Alert>());
+	            }
+	            alertsByHost.get(host).add(alert);
+	        } catch (MalformedURLException e) {
+	            System.err.println("Skipping malformed URL: "+alert.getUri());
+	            e.printStackTrace();
+	        }
+	    }
+	    return alertsByHost;
+	}
+	
+	public void generate(StringBuilder report, Model model, Map<String, List<Alert>> alertMap) throws Exception {
+        report.append("<?xml version=\"1.0\"?>");
+        report.append("<OWASPZAPReport version=\"").append(Constant.PROGRAM_VERSION).append("\" generated=\"").append(ReportGenerator.getCurrentDateTimeString()).append("\">\r\n");
+        siteXML(report, alertMap);
+        report.append("</OWASPZAPReport>");
+    }
+	
+	//TODO: clear comments --> implement methods
+	private void siteXML(StringBuilder report, Map<String, List<Alert>> alertMap) {
+        for (String host : alertMap.keySet()) {
+        	String siteName = host; //getCleanSiteName(host);
+            String[] hostAndPort = siteName.split(":");
+            boolean isSSL = (host.startsWith("https")); //getSiteNodeName().startWith...
+            //String siteStart = "<site name=\"" + XMLStringUtil.escapeControlChrs(site.getNodeName()) + "\"" +
+            String siteStart = "<site name=\"" + XMLStringUtil.escapeControlChrs(host) + "\"" +
+                    " host=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[0])+ "\""+
+                    " port=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[1])+ "\""+
+                    " ssl=\"" + String.valueOf(isSSL) + "\"" +
+                    ">";
+            
+            StringBuilder extensionsXML = getExtensionsXML(alertMap.get(host));
+            String siteEnd = "</site>";
+            report.append(siteStart);
+            report.append(extensionsXML);
+            report.append(siteEnd);
+		}
+    }
+	
+	//TODO: generate alert xml part
+	private StringBuilder getExtensionsXML(List<Alert> alerts){
+		return new StringBuilder();
+	}
+	
+	@Override
+	public boolean isSafe() {
 		return true;
 	}
 	
+	@Override
+	public boolean isEnableForComponent(Component invoker) {
+		if (super.isEnableForComponent(invoker)){
+			setEnabled(true);
+			return true;
+		}
+		return false;
+	}
 }
