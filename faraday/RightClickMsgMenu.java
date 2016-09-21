@@ -30,7 +30,6 @@ import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.extension.report.ReportGenerator;
 import org.parosproxy.paros.model.Model;
-import org.zaproxy.zap.extension.bugtracker.PopupMenuItemAlert;
 import org.zaproxy.zap.utils.XMLStringUtil;
 
 
@@ -40,7 +39,7 @@ public class RightClickMsgMenu extends PopupMenuItemAlert {
 	private XmlExport extension;
 
     public RightClickMsgMenu(XmlExport ext, String label) {
-        super(label);
+        super(label, true);
         /*
          * This is how you can pass in your extension, which you may well need to use
          * when you actually do anything of use.
@@ -101,26 +100,49 @@ public class RightClickMsgMenu extends PopupMenuItemAlert {
         report.append("<OWASPZAPReport version=\"").append(Constant.PROGRAM_VERSION).append("\" generated=\"").append(ReportGenerator.getCurrentDateTimeString()).append("\">\r\n");
         siteXML(report, alertMap);
         report.append("</OWASPZAPReport>");
+        System.out.println(report.toString());
     }
 	
 	//TODO: clear comments --> implement methods
 	private void siteXML(StringBuilder report, Map<String, List<Alert>> alertMap) {
-        for (String host : alertMap.keySet()) {
-        	String siteName = host; //getCleanSiteName(host);
-            String[] hostAndPort = siteName.split(":");
-            boolean isSSL = (host.startsWith("https")); //getSiteNodeName().startWith...
-            //String siteStart = "<site name=\"" + XMLStringUtil.escapeControlChrs(site.getNodeName()) + "\"" +
-            String siteStart = "<site name=\"" + XMLStringUtil.escapeControlChrs(host) + "\"" +
+		String siteName = "";
+		String name = "";
+		boolean isSSL = true;
+		String[] hostAndPort;
+		for (String host : alertMap.keySet()) {
+			System.out.println("host: " + host);
+			siteName = alertMap.get(host).get(0).getUri(); //getCleanSiteName(host);
+			name = siteName;
+			System.out.println("sitename: " + siteName);
+			siteName = siteName.substring(siteName.indexOf("//")+2);
+			siteName = siteName.substring(0, siteName.indexOf("/"));
+			System.out.println("sitename: " + siteName);
+			isSSL = siteName.startsWith("https"); //getSiteNodeName().startWith...
+			hostAndPort = siteName.split(":");
+			if(hostAndPort.length <= 1){
+				hostAndPort = new String[2];
+				hostAndPort[0] = siteName;
+				if(isSSL){
+					hostAndPort[1] = "443";
+				}else{
+					hostAndPort[1] = "80";
+				}
+			}
+			System.out.println("host and port: " + hostAndPort[0] + "," + hostAndPort[1]);
+			name = name.substring(0, name.indexOf("/", name.indexOf(hostAndPort[0])));
+			System.out.println("name: " + name);
+			String siteStart = "<site name=\"" + XMLStringUtil.escapeControlChrs(name) + "\"" +
                     " host=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[0])+ "\""+
                     " port=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[1])+ "\""+
                     " ssl=\"" + String.valueOf(isSSL) + "\"" +
                     ">";
-            
+			System.out.println("siteStart: " + siteStart);
             StringBuilder extensionsXML = getExtensionsXML(alertMap.get(host));
             String siteEnd = "</site>";
             report.append(siteStart);
             report.append(extensionsXML);
             report.append(siteEnd);
+            
 		}
     }
 	
