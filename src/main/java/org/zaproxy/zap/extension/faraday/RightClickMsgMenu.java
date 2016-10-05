@@ -20,7 +20,10 @@ package org.zaproxy.zap.extension.faraday;
 import java.awt.Component;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +32,9 @@ import java.util.Set;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.extension.report.ReportGenerator;
+import org.parosproxy.paros.extension.report.ReportLastScan;
 import org.parosproxy.paros.model.Model;
+import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.utils.XMLStringUtil;
 
 
@@ -57,7 +62,7 @@ public class RightClickMsgMenu extends PopupMenuItemAlert {
 			alerts.add(alert);
 			//TODO: check
         	alertMap.put(alert.getUrlParamXML(), alerts);
-			generate(new StringBuilder(500), extension.getModel(), alertMap);
+			this.extension.generate(new StringBuilder(500), extension.getModel(), alertMap);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -69,7 +74,7 @@ public class RightClickMsgMenu extends PopupMenuItemAlert {
         System.out.println("perform set");
         //TODO: fix try-catch
         try {
-			generate(new StringBuilder(500), extension.getModel(), getAlertsByHost(alerts));
+			this.extension.generate(new StringBuilder(500), extension.getModel(), getAlertsByHost(alerts));
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -93,62 +98,6 @@ public class RightClickMsgMenu extends PopupMenuItemAlert {
 	        }
 	    }
 	    return alertsByHost;
-	}
-	
-	public void generate(StringBuilder report, Model model, Map<String, List<Alert>> alertMap) throws Exception {
-        report.append("<?xml version=\"1.0\"?>");
-        report.append("<OWASPZAPReport version=\"").append(Constant.PROGRAM_VERSION).append("\" generated=\"").append(ReportGenerator.getCurrentDateTimeString()).append("\">\r\n");
-        siteXML(report, alertMap);
-        report.append("</OWASPZAPReport>");
-        System.out.println(report.toString());
-    }
-	
-	//TODO: clear comments --> implement methods
-	private void siteXML(StringBuilder report, Map<String, List<Alert>> alertMap) {
-		String siteName = "";
-		String name = "";
-		boolean isSSL = true;
-		String[] hostAndPort;
-		for (String host : alertMap.keySet()) {
-			System.out.println("host: " + host);
-			siteName = alertMap.get(host).get(0).getUri(); //getCleanSiteName(host);
-			name = siteName;
-			System.out.println("sitename: " + siteName);
-			siteName = siteName.substring(siteName.indexOf("//")+2);
-			siteName = siteName.substring(0, siteName.indexOf("/"));
-			System.out.println("sitename: " + siteName);
-			isSSL = siteName.startsWith("https"); //getSiteNodeName().startWith...
-			hostAndPort = siteName.split(":");
-			if(hostAndPort.length <= 1){
-				hostAndPort = new String[2];
-				hostAndPort[0] = siteName;
-				if(isSSL){
-					hostAndPort[1] = "443";
-				}else{
-					hostAndPort[1] = "80";
-				}
-			}
-			System.out.println("host and port: " + hostAndPort[0] + "," + hostAndPort[1]);
-			name = name.substring(0, name.indexOf("/", name.indexOf(hostAndPort[0])));
-			System.out.println("name: " + name);
-			String siteStart = "<site name=\"" + XMLStringUtil.escapeControlChrs(name) + "\"" +
-                    " host=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[0])+ "\""+
-                    " port=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[1])+ "\""+
-                    " ssl=\"" + String.valueOf(isSSL) + "\"" +
-                    ">";
-			System.out.println("siteStart: " + siteStart);
-            StringBuilder extensionsXML = getExtensionsXML(alertMap.get(host));
-            String siteEnd = "</site>";
-            report.append(siteStart);
-            report.append(extensionsXML);
-            report.append(siteEnd);
-            
-		}
-    }
-	
-	//TODO: generate alert xml part
-	private StringBuilder getExtensionsXML(List<Alert> alerts){
-		return new StringBuilder();
 	}
 	
 	@Override
