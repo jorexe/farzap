@@ -38,6 +38,11 @@ public class FaradayClient {
 
     }
 
+    public String createAndAddApplication(String hostId, String name, String status, String version) {
+
+        return extractId(client.sendMessage("createAndAddApplication", hostId, name, status, version));
+    }
+
     public String createAndAddServiceToInterface(String hostId, String interfaceId, String name, String protocol,
                                                  List<String> ports, String status, String version, String description) {
 
@@ -46,40 +51,48 @@ public class FaradayClient {
 
     }
 
-    public String createAndAddVulnToHost(String hostId, String name, String description,
-                                         List<String> refs, String severity) {
+    public String createAndAddServiceToApplication(String hostId, String applicationName, String name, String protocol,
+                                                 List<String> ports, String status, String version, String description) {
 
-        return extractId(client.sendMessage("createAndAddVulnToHost", hostId, name, description, refs, severity));
+        return extractId(client.sendMessage("createAndAddServiceToApplication", hostId, applicationName, name, protocol, ports,
+                status, version, description));
+
+    }
+
+    public String createAndAddVulnToHost(String hostId, String name, String description,
+                                         List<String> refs, String severity, String resolution) {
+
+        return extractId(client.sendMessage("createAndAddVulnToHost", hostId, name, description, refs, severity, resolution));
 
     }
 
     public String createAndAddVulnToInterface(String hostId, String interfaceId, String name,
-                                              String description, List<String> refs, String severity) {
+                                              String description, List<String> refs, String severity, String resolution) {
 
-        return extractId(client.sendMessage("createAndAddVulnToInterface", hostId, interfaceId, name, description, refs, severity));
+        return extractId(client.sendMessage("createAndAddVulnToInterface", hostId, interfaceId, name, description, refs, severity, resolution));
 
     }
 
     public String createAndAddVulnToApplication(String hostId, String applicationId, String name,
-                                                String description, List<String> refs, String severity) {
+                                                String description, List<String> refs, String severity, String resolution) {
 
-        return extractId(client.sendMessage("createAndAddVulnToApplication", hostId, applicationId, name, description, refs, severity));
+        return extractId(client.sendMessage("createAndAddVulnToApplication", hostId, applicationId, name, description, refs, severity, resolution));
 
     }
 
     public String createAndAddVulnToService(String hostId, String serviceId, String name,
-                                            String description, List<String> refs, String severity) {
+                                            String description, List<String> refs, String severity, String resolution) {
 
-        return extractId(client.sendMessage("createAndAddVulnToService", hostId, serviceId, name, description, refs, severity));
+        return extractId(client.sendMessage("createAndAddVulnToService", hostId, serviceId, name, description, refs, severity, resolution));
 
     }
 
     public String createAndAddVulnWebToService(String hostId, String serviceId, String name,
-                                               String description, List<String> refs, String severity,
+                                               String description, List<String> refs, String severity, String resolution,
                                                String website, String path, String request, String response,
                                                String method, String pname, String params, String query, String category) {
 
-        return extractId(client.sendMessage("createAndAddVulnWebToService", hostId, serviceId, name, description, refs, severity,
+        return extractId(client.sendMessage("createAndAddVulnWebToService", hostId, serviceId, name, description, refs, severity, resolution,
                 website, path, request, response, method, pname, params, query, category));
 
     }
