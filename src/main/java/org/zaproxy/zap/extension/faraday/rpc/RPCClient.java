@@ -46,33 +46,33 @@ public class RPCClient {
             connection.setDoOutput(true);
             connection.setDoInput(true);
             connection.setRequestMethod("POST");
+
+            connection.setRequestProperty("Content-Type", "text/xml");
+
+
             OutputStream out = connection.getOutputStream();
             OutputStreamWriter wout = new OutputStreamWriter(out, "UTF-8");
 
-            wout.write("<?xml version=\"1.0\"?>\r\n");
+            wout.write("<?xml version=\'1.0\'?>\r\n");
             wout.write("<methodCall>\r\n");
-            wout.write(String.format("  <methodName>%s</methodName>\r\n", methodName));
-            wout.write("  <params>\r\n");
+            wout.write(String.format("<methodName>%s</methodName>\r\n", methodName));
+            wout.write("<params>\r\n");
             for (Object param : params) {
                 if (param instanceof String) {
-                    wout.write("    <param>\r\n");
-                    wout.write(String.format("      <value><string>%s</string></value>\r\n", param));
-                    wout.write("    </param>\r\n");
+                    wout.write("<param>\r\n");
+                    wout.write(String.format("<value><string>%s</string></value>\r\n", param));
+                    wout.write("</param>\r\n");
                 } else if (param instanceof List) {
-                    wout.write("    <param>\r\n");
-                    wout.write("        <value>\r\n");
-                    wout.write("            <array>\r\n");
-                    wout.write("                <data>\r\n");
+                    wout.write("<param>\r\n");
+                    wout.write("<value><array><data>\r\n");
                     for (String item : (List<String>) param) {
-                        wout.write(String.format("      <value><string>%s</string></value>\r\n", item));
+                        wout.write(String.format("<value><string>%s</string></value>\r\n", item));
                     }
-                    wout.write("                </data>\r\n");
-                    wout.write("            </array>\r\n");
-                    wout.write("        </value>\r\n");
-                    wout.write("    </param>\r\n");
+                    wout.write("</data></array></value>\r\n");
+                    wout.write("</param>\r\n");
                 }
             }
-            wout.write("  </params>\r\n");
+            wout.write("</params>\r\n");
             wout.write("</methodCall>\r\n");
 
             wout.flush();
