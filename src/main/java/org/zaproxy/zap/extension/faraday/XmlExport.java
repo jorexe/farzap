@@ -1,6 +1,7 @@
 package org.zaproxy.zap.extension.faraday;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
@@ -8,20 +9,14 @@ import org.parosproxy.paros.extension.ExtensionHook;
 import org.parosproxy.paros.extension.report.ReportLastScan;
 import org.parosproxy.paros.model.Model;
 import org.parosproxy.paros.view.View;
-import org.zaproxy.zap.extension.faraday.RightClickMsgMenu;
 import org.zaproxy.zap.utils.XMLStringUtil;
-import org.zaproxy.zap.view.PopupMenuHistoryReference.Invoker;
 import org.zaproxy.zap.view.ZapMenuItem;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
-import java.io.IOException;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.DateFormat;
@@ -37,13 +32,13 @@ public class XmlExport extends ExtensionAdaptor {
     //Use this variable for run main without building extension and running zap
     //TODO Delete this variable on production environment
     private static final boolean TESTING = false;
-    
+    private static final Logger log = Logger.getLogger(PopupMenuItemAlert.class);
     //parse report
 	public static final String[] MSG_RISK = {"Informational", "Low", "Medium", "High"};
     public static final String[] MSG_CONFIDENCE = {"False Positive", "Low", "Medium", "High", "Confirmed"};
 	private static final SimpleDateFormat staticDateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
 
-    public static String EXTENSION_NAME = "Faraday Xml Exporter";
+    public static String EXTENSION_NAME = "Faraday Xml Export";
 	public static String PREFIX = "faraday.xmlExport.";
 	public static String DEFAULT_FARADAY_REPORT_PATH = System.getProperty("user.home") + "/.faraday/report";
     public static String UNPROCESSED_FARADAY_REPORT_FOLDER = "unprocessed";
@@ -76,6 +71,7 @@ public class XmlExport extends ExtensionAdaptor {
 
     public XmlExport() {
         super(EXTENSION_NAME);
+        log.info("Init xml export");
         this.faradayReportPath = DEFAULT_FARADAY_REPORT_PATH;
         currentWorkspace = "";
         usingDefaultParameters = false;

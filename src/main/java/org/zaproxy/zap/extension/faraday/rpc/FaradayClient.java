@@ -29,12 +29,22 @@ public class FaradayClient {
 
     }
 
+    public String createAndAddHost(String name) {
+        return extractId(client.sendMessage("createAndAddHost", name));
+    }
+
     public String createAndAddInterface(String hostId, String name, String mac, String ipv4Address, String ipv4Mask,
                           String ipv4Gateway, List<String> ipv4DNS,  String ipv6Address, String ipv6Prefix,
                           String ipv6Gateway, List<String> ipv6DNS, String networkSegment, List<String> hostnameResolution) {
 
         return extractId(client.sendMessage("createAndAddInterface", hostId, name, mac, ipv4Address, ipv4Mask,
                 ipv4Gateway, ipv4DNS, ipv6Address, ipv6Prefix, ipv6Gateway, ipv6DNS, networkSegment, hostnameResolution));
+
+    }
+
+    public String createAndAddInterface(String hostId, String name) {
+
+        return extractId(client.sendMessage("createAndAddInterface", hostId, name));
 
     }
 
@@ -48,6 +58,14 @@ public class FaradayClient {
 
         return extractId(client.sendMessage("createAndAddServiceToInterface", hostId, interfaceId, name, protocol, ports,
                 status, version, description));
+
+    }
+
+    public String createAndAddServiceToInterface(String hostId, String interfaceId, String name, String protocol,
+                                                 List<String> ports, String status) {
+
+        return extractId(client.sendMessage("createAndAddServiceToInterface", hostId, interfaceId, name, protocol, ports,
+                status));
 
     }
 
@@ -97,6 +115,16 @@ public class FaradayClient {
 
     }
 
+    //TODO This method is not working check it out
+    public String createAndAddVulnWebToService(String hostId, String serviceId, String name,
+                                               String description, List<String> refs, String severity, String resolution,
+                                               String website, String path, String requests, String params) {
+
+        return extractId(client.sendMessage("createAndAddVulnWebToService", hostId, serviceId, name, description, refs, severity, resolution,
+                website, path, requests, "", "", "", params));
+
+    }
+
     public String createAndAddNoteToHost(String hostId, String name, String text) {
         return extractId(client.sendMessage("createAndAddNoteToHost", hostId, name, text));
 
@@ -135,5 +163,11 @@ public class FaradayClient {
         matcher.find();
 
         return matcher.group(1);
+    }
+
+    public static void main(String[] args) {
+        FaradayClient faradayClient = new FaradayClient("http://localhost:9876/");
+        String hostId = faradayClient.createAndAddHost("OLAKASEHOST");
+        //faradayClient.createAndAddVulnToHost(hostId, "aName3", "aDesc",  Arrays.asList(new String[] {"test"}), "low", "");
     }
  }
