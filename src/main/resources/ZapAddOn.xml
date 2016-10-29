@@ -1,12 +1,13 @@
 <zapaddon>
-	<name>Faraday RpcExport</name>
+	<name>Faraday Export</name>
 	<version>1</version>
 	<status>alpha</status>
-	<description>Faraday rpc exporter.</description>
-	<author>Jorge Gomez - Julieta Sal-lari. Instituto Tecnologico de Buenos Aires</author>
+	<description>Faraday Plugin.</description>
+	<author>Jorge Gomez - Julieta Sal-lari - Santiago Ramirez Ayuso. Instituto Tecnologico de Buenos Aires</author>
 	<url></url>
-	<changes>First version faraday rpcexporter.</changes>
+	<changes>Faraday Plugin.</changes>
 	<extensions>
+		<extension>org.zaproxy.zap.extension.faraday.XmlExport</extension>
 		<extension>org.zaproxy.zap.extension.faraday.RPCExport</extension>
 	</extensions>
 	<ascanrules/>
