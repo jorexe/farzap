@@ -15,9 +15,7 @@ import org.parosproxy.paros.model.SiteNode;
 import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.extension.XmlReporterExtension;
 import org.zaproxy.zap.extension.alert.AlertParam;
-import org.zaproxy.zap.extension.faraday.RightClickMsgMenu;
 import org.zaproxy.zap.utils.XMLStringUtil;
-import org.zaproxy.zap.view.PopupMenuHistoryReference.Invoker;
 import org.zaproxy.zap.view.ScanPanel;
 import org.zaproxy.zap.view.ZapMenuItem;
 
@@ -25,21 +23,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
-import java.io.IOException;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 /**
  * Created by Jorge Gómez on 19/08/16.
@@ -57,7 +47,6 @@ public class XmlExport extends ExtensionAdaptor {
     public static String EXTENSION_NAME = "Faraday Xml Exporter";
 	public static String PREFIX = "faraday.xmlExport.";
 	public static String DEFAULT_FARADAY_REPORT_PATH = System.getProperty("user.home") + "/.faraday/report";
-    public static String UNPROCESSED_FARADAY_REPORT_FOLDER = "unprocessed";
 
     //State variables
     private String currentWorkspace;
@@ -109,7 +98,7 @@ public class XmlExport extends ExtensionAdaptor {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     if (usingDefaultParameters) {
-                        saveReport(faradayReportPath + "/" + currentWorkspace + "/" + UNPROCESSED_FARADAY_REPORT_FOLDER);
+                        saveReport(faradayReportPath + "/" + currentWorkspace);
                     } else {
                         showExportForm();
                     }
@@ -205,7 +194,7 @@ public class XmlExport extends ExtensionAdaptor {
             if (useDefaultCheckBox.isSelected()) {
                 usingDefaultParameters = true;
             }
-            saveReport(faradayReportPath + "/" + currentWorkspace + "/" + UNPROCESSED_FARADAY_REPORT_FOLDER);
+            saveReport(faradayReportPath + "/" + currentWorkspace);
         }
     }
 
