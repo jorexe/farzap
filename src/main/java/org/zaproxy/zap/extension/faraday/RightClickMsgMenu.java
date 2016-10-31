@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
@@ -54,51 +55,25 @@ public class RightClickMsgMenu extends PopupMenuItemAlert {
 	
 	@Override
 	protected void performAction(Alert alert) {
-		// TODO Auto-generated method stub
-		System.out.println("on perform single alert");
 		try {
-			Map<String, List<Alert>> alertMap = new HashMap<String, List<Alert>>();
-			List<Alert> alerts = new ArrayList();
+			Set<Alert> alerts = new TreeSet<Alert>();
 			alerts.add(alert);
-			//TODO: check
-        	alertMap.put(alert.getUrlParamXML(), alerts);
-			this.extension.generate(new StringBuilder(500), extension.getModel(), alertMap);
+			this.extension.generate(new StringBuilder(500), extension.getModel(), alerts);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
 	@Override
 	protected void performActions(Set<Alert> alerts) {
-        System.out.println("perform set");
         //TODO: fix try-catch
         try {
-			this.extension.generate(new StringBuilder(500), extension.getModel(), getAlertsByHost(alerts));
+			this.extension.generate(new StringBuilder(500), extension.getModel(), alerts);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
     }
-	
-	private Map<String, List<Alert>> getAlertsByHost(Set<Alert> alerts) {
-	    Map<String, List<Alert>> alertsByHost = new HashMap<String, List<Alert>>();
-	    for (Alert alert : alerts) {
-	        URL url = null;
-	        try {
-	            url = new URL(alert.getUri());
-	            String host = url.getHost();
-	            if (alertsByHost.get(host) == null) {
-	                alertsByHost.put(host, new ArrayList<Alert>());
-	            }
-	            alertsByHost.get(host).add(alert);
-	        } catch (MalformedURLException e) {
-	            System.err.println("Skipping malformed URL: "+alert.getUri());
-	            e.printStackTrace();
-	        }
-	    }
-	    return alertsByHost;
-	}
 	
 	@Override
 	public boolean isSafe() {

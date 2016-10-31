@@ -1,22 +1,35 @@
 package org.zaproxy.zap.extension.faraday;
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
+import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.core.scanner.Alert;
+import org.parosproxy.paros.extension.Extension;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
+import org.parosproxy.paros.extension.ExtensionLoader;
 import org.parosproxy.paros.extension.report.ReportLastScan;
 import org.parosproxy.paros.model.Model;
+import org.parosproxy.paros.model.SiteMap;
+import org.parosproxy.paros.model.SiteNode;
 import org.parosproxy.paros.view.View;
+import org.zaproxy.zap.extension.XmlReporterExtension;
+import org.zaproxy.zap.extension.alert.AlertParam;
+import org.zaproxy.zap.extension.faraday.RightClickMsgMenu;
 import org.zaproxy.zap.utils.XMLStringUtil;
+import org.zaproxy.zap.view.PopupMenuHistoryReference.Invoker;
+import org.zaproxy.zap.view.ScanPanel;
 import org.zaproxy.zap.view.ZapMenuItem;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.DateFormat;
@@ -24,6 +37,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Created by Jorge Gómez on 19/08/16.
@@ -32,13 +48,13 @@ public class XmlExport extends ExtensionAdaptor {
     //Use this variable for run main without building extension and running zap
     //TODO Delete this variable on production environment
     private static final boolean TESTING = false;
-    private static final Logger log = Logger.getLogger(PopupMenuItemAlert.class);
+    
     //parse report
 	public static final String[] MSG_RISK = {"Informational", "Low", "Medium", "High"};
     public static final String[] MSG_CONFIDENCE = {"False Positive", "Low", "Medium", "High", "Confirmed"};
 	private static final SimpleDateFormat staticDateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
 
-    public static String EXTENSION_NAME = "Faraday Xml Export";
+    public static String EXTENSION_NAME = "Faraday Xml Exporter";
 	public static String PREFIX = "faraday.xmlExport.";
 	public static String DEFAULT_FARADAY_REPORT_PATH = System.getProperty("user.home") + "/.faraday/report";
     public static String UNPROCESSED_FARADAY_REPORT_FOLDER = "unprocessed";
@@ -49,6 +65,7 @@ public class XmlExport extends ExtensionAdaptor {
     //TODO Check if there is a way to restore variable to false (zap settings maybe?)
     private boolean usingDefaultParameters;
 
+    private AlertParam alertParam = null;
     //Menu variable
     private ZapMenuItem zapMenuItem;
 
@@ -71,7 +88,6 @@ public class XmlExport extends ExtensionAdaptor {
 
     public XmlExport() {
         super(EXTENSION_NAME);
-        log.info("Init xml export");
         this.faradayReportPath = DEFAULT_FARADAY_REPORT_PATH;
         currentWorkspace = "";
         usingDefaultParameters = false;
@@ -197,7 +213,6 @@ public class XmlExport extends ExtensionAdaptor {
         ReportLastScan report = new ReportLastScan();
         DateFormat df = new SimpleDateFormat("YYYY-MM-DD-hh-mm-ss");
         String reportFullPath = folderPath + "/" + df.format(new Date()) + ".xml";
-        System.out.println("Saving report to:" + reportFullPath);
         try {
             report.generate(reportFullPath, getModel(), null);
             View.getSingleton().showMessageDialog(getStringLoc("exportSucceed"));
@@ -254,131 +269,143 @@ public class XmlExport extends ExtensionAdaptor {
 			return staticDateFormat.format(dateTime);
 		}
 	}
-    protected void generate(StringBuilder report, Model model, Map<String, List<Alert>> alertMap) throws Exception {
+    protected void generate(StringBuilder report, Model model, Set<Alert> alerts) throws Exception {
         report.append("<?xml version=\"1.0\"?>");
         report.append("<OWASPZAPReport version=\"").append(Constant.PROGRAM_VERSION).append("\" generated=\"").append(getCurrentDateTimeString()).append("\">\r\n");
-        siteXML(report, alertMap);
+        siteXML(report, alerts);
         report.append("</OWASPZAPReport>");
-        //System.out.println(report.toString());
         saveZapReport(report);
     }
-	
-	private void siteXML(StringBuilder report, Map<String, List<Alert>> alertMap) {
-		String siteName = "";
+   
+    
+    private String appendHeader(StringBuilder report, String uri){
+    	String siteName = "";
 		String name = "";
 		boolean isSSL = true;
 		String[] hostAndPort;
-		for (String host : alertMap.keySet()) {
-			System.out.println("host: " + host);
-			siteName = alertMap.get(host).get(0).getUri(); //getCleanSiteName(host);
-			name = siteName;
-			System.out.println("sitename: " + siteName);
-			siteName = siteName.substring(siteName.indexOf("//")+2);
-			siteName = siteName.substring(0, siteName.indexOf("/"));
-			System.out.println("sitename: " + siteName);
-			isSSL = name.startsWith("https"); //getSiteNodeName().startWith...
-			hostAndPort = siteName.split(":");
-			if(hostAndPort.length <= 1){
-				hostAndPort = new String[2];
-				hostAndPort[0] = siteName;
-				if(isSSL){
-					hostAndPort[1] = "443";
-				}else{
-					hostAndPort[1] = "80";
-				}
-			}
-			System.out.println("host and port: " + hostAndPort[0] + "," + hostAndPort[1]);
-			name = name.substring(0, name.indexOf("/", name.indexOf(hostAndPort[0])));
-			System.out.println("name: " + name);
-			String siteStart = "<site name=\"" + XMLStringUtil.escapeControlChrs(name) + "\"" +
-                    " host=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[0])+ "\""+
-                    " port=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[1])+ "\""+
-                    " ssl=\"" + String.valueOf(isSSL) + "\"" +
-                    ">";
-			System.out.println("siteStart: " + siteStart);
-            StringBuilder extensionsXML = getExtensionsXML(alertMap.get(host));
-            String siteEnd = "</site>";
-            report.append(siteStart);
-            
-            report.append("<alerts>");
-            int count = 0;
-            for (Alert alert : alertMap.get(host)) {
-            	if (count == 0) {
-            		report.append("<alertitem>\r\n");
-            		report.append("<pluginid>").append(alert.getPluginId()).append("</pluginid>\r\n");
-            		report.append("<alert>").append(replaceEntity(alert.getAlert())).append("</alert>\r\n");
-            		report.append("<name>").append(replaceEntity(alert.getAlert())).append("</name>\r\n");
-            		report.append("<riskcode>").append(alert.getRisk()).append("</riskcode>\r\n");
-            		report.append("<confidence>").append(alert.getConfidence()).append("</confidence>\r\n");
-            		report.append("<riskdesc>").append(replaceEntity(MSG_RISK[alert.getRisk()] + " (" + MSG_CONFIDENCE[alert.getConfidence()] + ")")).append("</riskdesc>\r\n");
-            		if (alert.getDescription() != null) {
-            			report.append("<desc>").append(replaceEntity(paragraph(alert.getDescription()))).append("</desc>\r\n");
-            		}
-            		report.append("<instances>\r\n");
-				}
-            	
-        		report.append("<instance>\r\n");
-        		report.append("  <uri>").append(replaceEntity(alert.getUri())).append("</uri>\r\n");
-        		if (alert.getParam().length() > 0) {
-        			report.append("<param>").append(replaceEntity(alert.getParam())).append("</param>\r\n");
-        		}
-        		if (alert.getAttack()!= null && alert.getAttack().length() > 0) {
-        			report.append("<attack>").append(replaceEntity(alert.getAttack())).append("</attack>\r\n");
-        		}
-        		if (alert.getEvidence() != null && alert.getEvidence().length() > 0) {
-        			report.append("<evidence>").append(replaceEntity(alert.getEvidence())).append("</evidence>\r\n");
-        		}
-        		report.append("</instance>\r\n");
-        		
-        		if(count == alertMap.get(host).size()-1){
-        			report.append("</instances>\r\n");
-        			report.append("<count>").append(count+1).append("</count>\r\n");
-        			if (alert.getSolution() != null) {
-            			report.append("<solution>").append(replaceEntity(paragraph(alert.getSolution()))).append("</solution>\r\n");
-            		}
-            		if (alert.getOtherInfo() != null && alert.getOtherInfo().length() > 0 /*&& otherInfo*/) {
-                        report.append("<otherinfo>").append(replaceEntity(paragraph(alert.getOtherInfo()))).append("</otherinfo>\r\n");
-                    } 
-            		if (alert.getReference() != null) {               
-            			report.append("<reference>" ).append(replaceEntity(paragraph(alert.getReference()))).append("</reference>\r\n");
-            		}
-            		if (alert.getCweId() > 0 /*&& cweid*/) {
-            			report.append("<cweid>" ).append(alert.getCweId()).append("</cweid>\r\n");
-            		}
-            		if (alert.getWascId() > 0 /*&& wascid*/) {
-            			report.append("<wascid>" ).append(alert.getWascId()).append("</wascid>\r\n");
-            		}
-
-            		//no estoy segura si esto debe aparecer
-//            		if (alert.getMessage() != null && alert.getMessage().getRequestHeader() != null && !(alert.getMessage().getRequestHeader().toString().equals(""))) {
-//            			report.append("<requestheader>").append(paragraph(replaceEntity(alert.getMessage().getRequestHeader().toString()))).append("</requestheader>\r\n");
-//            		}
-//            		if (alert.getMessage() != null && alert.getMessage().getResponseHeader() != null && !(alert.getMessage().getResponseHeader().toString().equals(""))) {
-//        			report.append("<responseheader>").append(paragraph(replaceEntity(alert.getMessage().getResponseHeader().toString()))).append("</responseheader>\r\n");
-//            		}
-//            		if (alert.getMessage().getRequestBody().length() > 0 /*&& requestBody*/) {
-//            			report.append("<requestbody>").append(replaceEntity(alert.getMessage().getRequestBody().toString())).append("</requestbody>\r\n");
-//                	}
-//            		if (alert.getMessage().getResponseBody().length() > 0 /*&& responseBody*/) {
-//            			report.append("<responsebody>").append(replaceEntity(alert.getMessage().getResponseBody().toString())).append("</responsebody>\r\n");
-//                	}
-            		report.append("</alertitem>\r\n");
-        		}
-        		count++;
-			}
-            report.append("</alerts>");
-            report.append(siteEnd);
+		URL url = null;
+		try {
+			url = new URL(uri);
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			return "";
 		}
+        String host = url.getHost();
+		siteName = url.toString();
+		name = siteName.substring(0, siteName.indexOf("/",siteName.indexOf(host)));
+		
+		isSSL = name.startsWith("https");
+		
+		siteName = siteName.substring(siteName.indexOf("//")+2);
+		siteName = siteName.substring(siteName.indexOf(host), siteName.indexOf("/"));
+		hostAndPort = siteName.split(":");
+		if(hostAndPort.length <= 1){
+			hostAndPort = new String[2];
+			//hostAndPort[0] = host;
+			if(isSSL){
+				hostAndPort[1] = "443";
+			}else{
+				hostAndPort[1] = "80";
+			}
+		}
+		hostAndPort[0] = host;
+
+		String siteStart = "<site name=\"" + XMLStringUtil.escapeControlChrs(name) + "\"" +
+                " host=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[0])+ "\""+
+                " port=\"" + XMLStringUtil.escapeControlChrs(hostAndPort[1])+ "\""+
+                " ssl=\"" + String.valueOf(isSSL) + "\"" +
+                ">";
+        report.append(siteStart);
+        return host;
+    }
+    
+    private void siteXML(StringBuilder report, Set<Alert> alerts) {
+    	String host = appendHeader(report, alerts.iterator().next().getUri());
+            
+		SiteMap siteMap = Model.getSingleton().getSession().getSiteTree();
+        SiteNode root = (SiteNode) siteMap.getRoot();
+        int siteNumber = root.getChildCount();
+        for (int i = 0; i < siteNumber; i++) {
+            SiteNode site = (SiteNode) root.getChildAt(i);
+            String sitename = ScanPanel.cleanSiteName(site, true);
+            String[] hostPort = sitename.split(":");
+            if(hostPort[0].equals(host)){
+            	StringBuilder extensionsXML = getExtensionsXML(site, alerts);
+            	report.append(extensionsXML);
+            }
+        }
     }
 	
-	private String replaceEntity(String text) {
-		String result = null;
-		if (text != null) {
-			result = entityEncode(text);
+    public StringBuilder getExtensionsXML(SiteNode site, Set<Alert> alerts) {
+        StringBuilder extensionXml = new StringBuilder();
+        ExtensionLoader loader = Control.getSingleton().getExtensionLoader();
+        int extensionCount = loader.getExtensionCount();
+        for(int i=0; i<extensionCount; i++) {
+            Extension extension = loader.getExtension(i);
+            if(extension instanceof XmlReporterExtension) {
+                extensionXml.append(getMineXml(site, alerts));
+            }
+        }
+        return extensionXml;
+    }
+    
+    private AlertParam getAlertParam() {
+		if (alertParam == null) {
+			alertParam = new AlertParam();
 		}
-		return result;
+		return alertParam;
 	}
-	
+    
+    private String alertFingerprint(Alert alert) {
+    	return alert.getPluginId() + "/" + alert.getName() + "/" + alert.getRisk() + "/" + alert.getConfidence();
+    }
+    
+    public String getMineXml(SiteNode site, Set<Alert> alertsSelected) {
+        StringBuilder xml = new StringBuilder();
+        xml.append("<alerts>");
+        List<Alert> alerts = site.getAlerts();
+        SortedSet<String> handledAlerts = new TreeSet<String>(); 
+
+        for (Alert alert : alertsSelected) {
+            if (alert.getConfidence() != Alert.CONFIDENCE_FALSE_POSITIVE) {
+            	if (this.getAlertParam().isMergeRelatedIssues()) {
+            		String fingerprint = alertFingerprint(alert);
+	            	if (handledAlerts.add(fingerprint)) {
+	            		// Its a new one
+	            		// Build up the full set of details
+	            		StringBuilder sb = new StringBuilder();
+	            		sb.append("  <instances>\n");
+	            		int count = 0;
+	            		for (int j=0; j < alerts.size(); j++) {
+	            			// Deliberately include i!
+	            			Alert alert2 = alerts.get(j);
+	            			if (fingerprint.equals(alertFingerprint(alert2))) {
+	            				if (this.getAlertParam().getMaximumInstances() == 0 ||
+	            						count < this.getAlertParam().getMaximumInstances()) {
+		            				sb.append("  <instance>\n");
+		            				sb.append(alert2.getUrlParamXML());
+		            				sb.append("  </instance>\n");
+	            				}
+	            				count ++;
+	            			}
+	            		}
+	            		sb.append("  </instances>\n");
+	            		sb.append("  <count>");
+	            		sb.append(count);
+	            		sb.append("</count>\n");
+	            		xml.append(alert.toPluginXML(sb.toString()));
+	            	}
+            	} else {
+                    String urlParamXML = alert.getUrlParamXML();
+                    xml.append(alert.toPluginXML(urlParamXML));
+            	}
+            }
+        }
+        xml.append("</alerts>");
+        xml.append("</site>");
+        return xml.toString();
+    }
+    
 	public static String entityEncode(String text) {
 		String result = text;
 
@@ -389,14 +416,6 @@ public class XmlExport extends ExtensionAdaptor {
 		// The escapeXml function doesnt cope with some 'special' chrs
 
 		return StringEscapeUtils.escapeXml(XMLStringUtil.escapeControlChrs(result));
-	}
-	private String paragraph(String text) {
-		return "<p>" + text.replaceAll("\\r\\n","</p><p>").replaceAll("\\n","</p><p>") + "</p>";
-	}
-	
-	//TODO: generate alert xml part
-	private StringBuilder getExtensionsXML(List<Alert> alerts){
-		return new StringBuilder();
 	}
     
     private void saveZapReport(StringBuilder sb){
@@ -427,11 +446,12 @@ public class XmlExport extends ExtensionAdaptor {
     	BufferedWriter bw = null;
 		try {
 			DateFormat df = new SimpleDateFormat("YYYY-MM-DD-hh-mm-ss");
-	        String reportFullPath = faradayReportPath + "/" + currentWorkspace + "/" + UNPROCESSED_FARADAY_REPORT_FOLDER + "/" + df.format(new Date()) + ".xml";
-			bw = new BufferedWriter(new FileWriter(reportFullPath));
+	        String reportFullPath = faradayReportPath + "/" + df.format(new Date()) + ".xml";
+			System.out.println("path:"+reportFullPath);
+	        bw = new BufferedWriter(new FileWriter(reportFullPath));
 			bw.write(sb.toString());
 		} catch (IOException e2) {
-			//logger.error(e2.getMessage(), e2);
+			//could not generate report
 		} finally {
 			try {
 				if (bw != null) {
