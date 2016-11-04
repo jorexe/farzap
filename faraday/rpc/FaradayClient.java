@@ -87,6 +87,7 @@ public class FaradayClient {
 
     }
 
+    //Working parameters: (hostId, serviceId, "aVuln", "aDescription", ["CWE-829"], "Low", "Open", "www.google.com", "/", "aRequest", "aResponse", "GET", "aPname", "someParams", "asads", "adsas")
     public String createAndAddVulnWebToService(String hostId, String serviceId, String name,
                                                String description, List<String> refs, String severity, String resolution,
                                                String website, String path, String request, String response,
