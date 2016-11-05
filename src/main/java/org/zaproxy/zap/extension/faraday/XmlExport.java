@@ -1,6 +1,7 @@
 package org.zaproxy.zap.extension.faraday;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.core.scanner.Alert;
@@ -32,16 +33,20 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Created by Jorge Gómez on 19/08/16.
+ * A ZAP extension wich exports a ZAP report into a Faraday specific workspace.
+ *
+ * References:
+ *   https://www.faradaysec.com/
+ *   https://github.com/infobyte/faraday
+ *
+ *  Jorge Gómez - Julieta Sal-lari - Santiago Ramirez Ayuso
+ *
+ *  Instituto Tecnológico de Buenos Aires
  */
 public class XmlExport extends ExtensionAdaptor {
-    //Use this variable for run main without building extension and running zap
-    //TODO Delete this variable on production environment
-    private static final boolean TESTING = false;
-    
-    //parse report
-	public static final String[] MSG_RISK = {"Informational", "Low", "Medium", "High"};
-    public static final String[] MSG_CONFIDENCE = {"False Positive", "Low", "Medium", "High", "Confirmed"};
+
+    private static final Logger log = Logger.getLogger(RPCExport.class);
+
 	private static final SimpleDateFormat staticDateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
 
     public static String EXTENSION_NAME = "Faraday Xml Exporter";
@@ -51,6 +56,7 @@ public class XmlExport extends ExtensionAdaptor {
     //State variables
     private String currentWorkspace;
     private String faradayReportPath;
+
     //TODO Check if there is a way to restore variable to false (zap settings maybe?)
     private boolean usingDefaultParameters;
 
@@ -69,11 +75,7 @@ public class XmlExport extends ExtensionAdaptor {
 
     //shortcut on some components to add to report
     private RightClickMsgMenu popupMsgMenuExample;
-    
-    //TODO Delete main on production environment
-    public static void main(String[] args) throws Exception {
-        new XmlExport().showExportForm();
-    }
+
 
     public XmlExport() {
         super(EXTENSION_NAME);
@@ -182,8 +184,6 @@ public class XmlExport extends ExtensionAdaptor {
             mainPanel.add(getUseDefaultCheckBox());
         }
 
-        //TODO Check if there is another way to show confirm dialog using next line
-        //View.getSingleton().showConfirmDialog(mainPanel, getStringLoc("sendReport"));
         int result = JOptionPane.showConfirmDialog(null, mainPanel, getStringLoc("sendReport"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.YES_OPTION) {
             currentWorkspace = (String) workspaceComboBox.getSelectedItem();
@@ -220,11 +220,7 @@ public class XmlExport extends ExtensionAdaptor {
 	}
     
     private String getStringLoc(String str) {
-        if (TESTING || Constant.messages == null) {
-            return str;
-        } else {
-            return Constant.messages.getString(PREFIX + str);
-        }
+        return Constant.messages.getString(PREFIX + str);
     }
 
     @Override
@@ -433,14 +429,13 @@ public class XmlExport extends ExtensionAdaptor {
 	        }
     	}
     	BufferedWriter bw = null;
-		try {
-			DateFormat df = new SimpleDateFormat("YYYY-MM-DD-hh-mm-ss");
-	        String reportFullPath = faradayReportPath + "/" + df.format(new Date()) + ".xml";
-			System.out.println("path:"+reportFullPath);
+        DateFormat df = new SimpleDateFormat("YYYY-MM-DD-hh-mm-ss");
+        String reportFullPath = faradayReportPath + "/" + currentWorkspace + "/" + df.format(new Date()) + ".xml";
+        try {
 	        bw = new BufferedWriter(new FileWriter(reportFullPath));
 			bw.write(sb.toString());
 		} catch (IOException e2) {
-			//could not generate report
+            log.error("Could not export report into " + reportFullPath);
 		} finally {
 			try {
 				if (bw != null) {

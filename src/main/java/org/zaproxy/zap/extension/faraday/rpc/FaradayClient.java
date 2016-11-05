@@ -107,21 +107,8 @@ public class FaradayClient {
 
     public String createAndAddVulnWebToService(String hostId, String serviceId, String name,
                                                String description, List<String> refs, String severity, String resolution,
-                                               String website, String path, String request, String response,
-                                               String method, String pname, String params, String query, String category) {
-
-        return extractId(client.sendMessage("createAndAddVulnWebToService", hostId, serviceId, name, description, refs, severity, resolution,
-                website, path, request, response, method, pname, params, query, category));
-
-    }
-
-    //TODO This method is not working check it out
-    public String createAndAddVulnWebToService(String hostId, String serviceId, String name,
-                                               String description, List<String> refs, String severity, String resolution,
-                                               String website, String path, String requests, String params) {
-
-        return extractId(client.sendMessage("createAndAddVulnWebToService", hostId, serviceId, name, description, refs, severity, resolution,
-                website, path, requests, "", "", "", params));
+                                               String website, String path, String requests, String response, String method, String paramName, String params, String query, String category) {
+        return extractId(client.sendMessage("createAndAddVulnWebToService", hostId, serviceId, name, description, refs, severity, resolution, website, path, requests, response, method, paramName, params, query, category));
 
     }
 
@@ -163,11 +150,5 @@ public class FaradayClient {
         matcher.find();
 
         return matcher.group(1);
-    }
-
-    public static void main(String[] args) {
-        FaradayClient faradayClient = new FaradayClient("http://localhost:9876/");
-        String hostId = faradayClient.createAndAddHost("OLAKASEHOST");
-        //faradayClient.createAndAddVulnToHost(hostId, "aName3", "aDesc",  Arrays.asList(new String[] {"test"}), "low", "");
     }
  }

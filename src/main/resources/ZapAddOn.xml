@@ -2,7 +2,7 @@
 	<name>Faraday Export</name>
 	<version>1</version>
 	<status>alpha</status>
-	<description>Faraday Plugin.</description>
+	<description>Faraday Plugin wich exports a XmlReport into Faraday workspace and also uses Faraday RPC Api to upload vulnerabilities.</description>
 	<author>Jorge Gomez - Julieta Sal-lari - Santiago Ramirez Ayuso. Instituto Tecnologico de Buenos Aires</author>
 	<url></url>
 	<changes>Faraday Plugin.</changes>

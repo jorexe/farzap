@@ -1,5 +1,6 @@
 package org.zaproxy.zap.extension.faraday;
 
+import org.apache.commons.httpclient.URI;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
@@ -19,7 +20,20 @@ import java.net.URL;
 import java.util.Arrays;
 
 /**
- * Created by jorexe on 25/10/16.
+ * A ZAP extension wich connects with Faraday RPC api and uploads alerts in real time.
+ *
+ * References:
+ *   https://www.faradaysec.com/
+ *   https://github.com/infobyte/faraday
+ *
+ * Implementation References:
+ *   https://github.com/zaproxy/zaproxy/blob/b5f6c6397f42bc220372580b9ef49c97d798a9b7/src/org/zaproxy/zap/eventBus/EventConsumer.java
+ *   https://github.com/zaproxy/zap-extensions/blob/45a13337dd42a776d51f7eaa0c1b03b105677f68/src/org/zaproxy/zap/extension/alertFilters/ExtensionAlertFilters.java#L113-L115
+ *   https://github.com/zaproxy/zap-extensions/blob/45a13337dd42a776d51f7eaa0c1b03b105677f68/src/org/zaproxy/zap/extension/alertFilters/ExtensionAlertFilters.java#L319
+ *
+ *  Jorge Gómez - Julieta Sal-lari - Santiago Ramirez Ayuso
+ *
+ *  Instituto Tecnológico de Buenos Aires
  */
 public class RPCExport extends ExtensionAdaptor implements EventConsumer{
 
@@ -27,8 +41,9 @@ public class RPCExport extends ExtensionAdaptor implements EventConsumer{
 
     public static String EXTENSION_NAME = "Faraday RPC Export";
     public static String PREFIX = "faraday.rpcExport.";
+    public static String FARADAY_DEFAULT_RPCXML_URL = "http://localhost:9876/";
 
-    private static FaradayClient faradayClient = new FaradayClient("http://localhost:9876/");
+    private static FaradayClient faradayClient = new FaradayClient(FARADAY_DEFAULT_RPCXML_URL);
 
     private static final Logger log = Logger.getLogger(RPCExport.class);
 
@@ -40,7 +55,6 @@ public class RPCExport extends ExtensionAdaptor implements EventConsumer{
 
     @Override
     public void init() {
-        log.info("Init RPC Export");
         super.init();
         ZAP.getEventBus().registerConsumer(this,
                 AlertEventPublisher.getPublisher().getPublisherName(),
@@ -48,11 +62,7 @@ public class RPCExport extends ExtensionAdaptor implements EventConsumer{
     }
 
     private String getStringLoc(String str) {
-        if (TESTING || Constant.messages == null) {
-            return str;
-        } else {
-            return Constant.messages.getString(PREFIX + str);
-        }
+        return Constant.messages.getString(PREFIX + str);
     }
 
     @Override
@@ -61,8 +71,21 @@ public class RPCExport extends ExtensionAdaptor implements EventConsumer{
     }
 
     @Override
+    public String getDescription() {
+        return getStringLoc("description");
+    }
+
+    @Override
+    public URL getURL() {
+        try {
+            return new URL(getStringLoc("url"));
+        } catch (MalformedURLException e) {
+            return null;
+        }
+    }
+
+    @Override
     public void eventReceived(Event event) {
-        log.info("RPCExport.eventReceived");
         TableAlert tableAlert = Model.getSingleton().getDb().getTableAlert();
 
         String alertId = event.getParameters().get(AlertEventPublisher.ALERT_ID);
@@ -95,68 +118,59 @@ public class RPCExport extends ExtensionAdaptor implements EventConsumer{
     }
 
     private void handleAlert(Alert alert) {
-//        log.info("Alert: alert.getAttack() : " + alert.getAttack());
-//        log.info("Alert: alert.getDescription() : " + alert.getDescription());
-//        log.info("Alert: alert.getEvidence() : " + alert.getEvidence());
-//        log.info("Alert: alert.getMethod() : " + alert.getMethod());
-//        log.info("Alert: alert.getName() : " + alert.getName());
-//        log.info("Alert: alert.getOtherInfo() : " + alert.getOtherInfo());
-//        log.info("Alert: alert.getParam() : " + alert.getParam());
-//        log.info("Alert: alert.getPostData() : " + alert.getPostData());
-//        log.info("Alert: alert.getReference() : " + alert.getReference());
-//        log.info("Alert: alert.getSolution() : " + alert.getSolution());
-//        log.info("Alert: alert.getUri() : " + alert.getUri());
-//        log.info("Alert: alert.getUrlParamXML() : " + alert.getUrlParamXML());
-
-        String hostId = faradayClient.createAndAddHost(getHost(alert));
-        String interfaceId = faradayClient.createAndAddInterface(hostId, getHost(alert));
-        String serviceId = faradayClient.createAndAddServiceToInterface(hostId, interfaceId, "http", "tcp", Arrays.asList(new String[]{"8081"}), "open");
-        String vulnId = faradayClient.createAndAddVulnToService(hostId, serviceId, alert.getName(), alert.getDescription(),
-                Arrays.asList(new String[] {alert.getReference()}), getFaradayRisk(alert.getRisk()), alert.getSolution());
-
-//        TODO Maybe
-//        String vulnId = faradayClient.createAndAddVulnWebToService(hostId, serviceId, alert.getName(), alert.getDescription(),
-//                Arrays.asList(new String[] {alert.getReference()}), getFaradayRisk(alert.getRisk()), alert.getSolution(),
-//                getHost(alert), alert.getUri(), alert.getUri() /*\n separated string*/, alert.getParam()/*, separated string*/);
-        log.info("Added vuln " + vulnId);
-
-
-    }
-
-    private String getHost(Alert alert) {
         try {
-            return alert.getMsgUri().getHost();
+
+            URI alertUri = alert.getMsgUri();
+            String hostId = faradayClient.createAndAddHost(alertUri.getHost());
+            String interfaceId = faradayClient.createAndAddInterface(hostId, alertUri.getHost());
+            String serviceId = faradayClient.createAndAddServiceToInterface(hostId, interfaceId, alertUri.getScheme(), "tcp", Arrays.asList(new String[]{Integer.toString(alertUri.getPort())}), "open");
+
+//            TODO Delete this. Only for testing
+//            log.info("Sending hostId = " + hostId);
+//            log.info("Sending serviceId = " + serviceId);
+//            log.info("Sending alert.getName() = " + alert.getName());
+//            log.info("Sending alert.getDescription() + + alert.getReference() = " + alert.getDescription() + "\nReference: " + alert.getReference());
+//            log.info("Sending Arrays.asList(new String[] {'CWE-' + alert.getCweId()}) = " + Arrays.asList(new String[] {"CWE-" + alert.getCweId()}));
+//            log.info("Sending Integer.toString(alert.getRisk()) = " + Integer.toString(alert.getRisk()));
+//            log.info("Sending alert.getSolution() = " + alert.getSolution());
+//            log.info("Sending getHost(alert) = " + getHost(alert));
+//            log.info("Sending alert.getUri() = " + alert.getUri());
+//            log.info("Sending alert.getUri()  = " + alert.getUri() );
+//            log.info("Sending alert.getMethod() = " + alert.getMethod());
+//            log.info("Sending alert.getParam() = " + alert.getParam());
+//            log.info("Sending alert.getMsgUri().getProtocolCharset() = " + alert.getMsgUri().getProtocolCharset());
+//            log.info("Sending alert.getMsgUri().getPort() = " + alert.getMsgUri().getPort());
+//            log.info("Sending alert.getParam() = " + alert.getParam());
+//            log.info("Sending alert.getParam() = " + alert.getParam());
+
+
+            //Parameters received by Faraday RPC Api based in ZAP Plugin (https://github.com/infobyte/faraday/blob/master/plugins/repo/zap/plugin.py):
+            //hostId: String
+            //serviceId: String
+            //name: String
+            //description: String. Description and reference concatenated.
+            //refs: String[]. Single element with CWE ID
+            //severity: String
+            //website: String. Only host.
+            //path: String
+            //requests: String. Separated by \n
+            //response: String. Empty on Faraday Zap Plugin
+            //method: String
+            //paramName: String. Empty on Faraday Zap Plugin
+            //params: String. Comma separated values
+            //query: String. Empty on Faraday Zap Plugin
+            //category: String. Empty on Faraday Zap Plugin
+            String vulnId = faradayClient.createAndAddVulnWebToService(hostId, serviceId,
+                    alert.getName(), alert.getDescription() + "\nReferences: " + alert.getReference(),
+                    Arrays.asList("CWE-" + alert.getCweId()),
+                    Integer.toString(alert.getRisk()), alert.getSolution(),
+                    alertUri.getHost(), alertUri.getPath(), alert.getUri(), "", alert.getMethod(),
+                    alert.getParam(), alert.getParam(), alertUri.getQuery(), "");
+
         } catch (Exception e) {
+            log.error("Could not load alert " + alert.getName() + " into Faraday.");
+        }
 
-        }
-        try {
-            return new URL(alert.getUri()).getHost();
-        } catch (MalformedURLException e) {
-            return "";
-        }
     }
 
-    private String getFaradayRisk(int risk) {
-        switch (risk) {
-            case Alert.RISK_HIGH:
-                return "high";
-            case Alert.RISK_INFO:
-                return "info";
-            case Alert.RISK_LOW:
-                return "low";
-            case Alert.RISK_MEDIUM:
-                return "med";
-        }
-        return "undefined";
-    }
-
-//    Python ZAP RPC METHODS
-//    h_id = self.createAndAddHost(site.ip)
-//    i_id = self.createAndAddInterface(h_id,site.ip,ipv4_address=site.ip,hostname_resolution=host)
-//    s_id = self.createAndAddServiceToInterface(h_id,i_id,"http","tcp",ports=[site.port],status='open')
-//    n_id = self.createAndAddNoteToService(h_id, s_id, "website", "")
-//    n2_id = self.createAndAddNoteToNote(h_id, s_id, n_id, site.host, "")
-//
-//            for item in site.items:
-//    v_id = self.createAndAddVulnWebToService(h_id,s_id,item.name,item.desc,website=site.host,severity=item.severity,path=item.items[0]['uri'],params=item.items[0]['params'],request=item.requests,ref=item.ref,resolution=item.resolution)
 }
